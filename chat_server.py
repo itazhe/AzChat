@@ -15,25 +15,58 @@ def server(sock_conn, client_addr):
     '''
     try:
         while True:
-            # 设置接收套接字大小
-            msg = sock_conn.recv(1024)
-            # 防止发送空消息
-            if not msg:
+            # 接收报头
+            msg_data_len = sock_conn.recv(15)
+            print(msg_data_len.decode())
+            # 如果报头长度为0就退出，即防止 空消息
+            if not msg_data_len:
                 break
-            
-            print(msg.decode())
+            # 去除右边多余空格
+            msg_len = int(msg_data_len.decode().rstrip())
 
-            back = "收到"
-            sock_conn.send(back.encode())
+            # 接收数据长度
+            recv_size = 0
+            # 接收的数据
+            msg_data = b''
+            # 循环接收
+            while recv_size < msg_len:
+                # 接收数据大小的数据
+                temp_data = sock_conn.recv(msg_len - recv_size)
+                # 如果没接受到，代表接收完毕，退出
+                if not temp_data:
+                    break
+                # 每次接收到的数据添加到msg_data里
+                msg_data += temp_data
+                # 每次接收到的数据长度加到rece_size上
+                recv_size += len(temp_data)
+            # while循环执行完毕就会执行else
+            else:
+                # 转发消息
+                for sock_temp, temp_addr in client_socks:
+                    # 排除自己
+                    if sock_temp is not sock_conn:
+                        try:
+                            # 发送报头，数据长度
+                            sock_temp.send(msg_data_len)
+                            # 发送数据
+                            sock_temp.send(msg_data)
+                        except:
+                            # 发送不到就移除
+                            client_socks.remove((sock_temp, temp_addr))
+                            sock_temp.close()
+                continue
+            break
     finally:
-        # 断开与客户端连接
+        client_socks.remove((sock_conn, client_addr))
         sock_conn.close()
-
+                    
 
 def main():
     '''
     主函数
     '''
+    global client_socks
+
     # 设置套接字
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # 设置重用 ip 和 端口号
@@ -43,9 +76,14 @@ def main():
     # 设置最大连接数
     sock.listen(5)
     
+    # 连接的人
+    client_socks = []
+
     while True:
         # 阻塞，等待连接
         sock_conn, client_addr = sock.accept()
+        # 添加连接的人进去
+        client_socks.append((sock_conn, client_addr))
         # 创建线程处理聊天
         threading.Thread(target=server, args=(sock_conn, client_addr)).start()
 
