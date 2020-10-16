@@ -10,9 +10,10 @@ pyqt中文学习网站：http://code.py40.com/pyqt5/16.html
 import socket
 import sys
 from threading import Thread
-from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QPushButton, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit, QFormLayout, QLabel
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QTextCursor
+from PyQt5.QtGui import QIcon, QTextCursor, QPalette, QBrush, QPixmap, QFont
+import json
 
 
 class Interface(QWidget):
@@ -22,14 +23,126 @@ class Interface(QWidget):
     def __init__(self):
         super().__init__()
         
-        self.chat()
-        # 创建线程 接收数据
-        Thread(target=self.recv_finfor).start()
+        # self.chat()
+        self.login()
+        # self.select_chat()
+    
+    def login(self):
+        '''
+        登录界面
+        '''
+        # 设置窗口的 位置 和 大小
+        self.setGeometry(690, 360, 550, 400)
+        # 设置窗口标题
+        self.setWindowTitle("AzChat")
+        # 无边框
+        # self.setWindowFlags(Qt.FramelessWindowHint)
+        # 设置窗口图标
+        self.setWindowIcon(QIcon(r'Python的Socket网络编程\AzChat聊天工具\chat.png'))
+
+        # 设置背景图片
+        palette = QPalette()
+        palette.setBrush(QPalette.Background, QBrush(QPixmap(r"Python的Socket网络编程\AzChat聊天工具\bj.png")))
+        self.setPalette(palette)
+
+        # 用户名
+        self.label_u = QLabel()
+        self.label_u.setText('<font color=\"#0000FF\">'+ "用户名" + '</font>')
+        self.label_u.setFont(QFont('Arial', 15))
+        self.lineedit_u = QLineEdit()
+        # self.lineedit_u.setPlaceholderText("用户名")
+
+        # 密码
+        self.label_p = QLabel()
+        self.label_p.setText('<font color=\"#B0E2FF\">'+ "密码" + '</font>')
+        self.label_p.setFont(QFont('Arial', 15))
+        self.lineedit_p = QLineEdit()
+        # 密码回显效果设置
+        self.lineedit_p.setEchoMode(QLineEdit.Password)
+        # self.lineedit_p.setPlaceholderText("密码")
+
+        self.lineedit_u.setFont(QFont('Arial',15))
+        self.lineedit_p.setFont(QFont('Arial',15))
+
+        # 登录按钮
+        self.login_btn = QPushButton("登录")
+        self.login_btn.clicked[bool].connect(self.login_req)
+
+        # 纵向布局
+        layout = QVBoxLayout()
+        # 占位
+        layout.addStretch(1)
+        layout.addWidget(self.label_u)
+        layout.addWidget(self.lineedit_u)
+        layout.addWidget(self.label_p)
+        layout.addWidget(self.lineedit_p)
+        layout.addStretch(1)
+        layout.addWidget(self.login_btn)
+        layout.addStretch(1)
+
+        # 横向布局
+        hlayout = QHBoxLayout()
+        hlayout.addStretch(1)
+        hlayout.addLayout(layout)
+        hlayout.addStretch(1)
+        
+        # 设置布局
+        self.setLayout(hlayout)
+
+        self.show()
+
+    
+    def login_req(self):
+        '''
+        登录请求
+        '''
+        # 获取输入数据
+        user_name = self.lineedit_u.text()
+        password = self.lineedit_p.text()
+        # 设置数据格式
+        login_data = {"args":{"user_name": user_name, "password": password}}
+        # 数据
+        login_data = json.dumps(login_data).encode()
+        # 数据大小
+        login_data_len = "{:<15}".format(len(login_data)).encode()
+        # 发送数据
+        sock.send(login_data_len + login_data)
+
+
+    def select_chat(self):
+        '''
+        登录后选择聊天界面
+        '''
+        self.setGeometry(1300, 200, 300, 600)
+        self.setWindowTitle("AzChat")
+        self.setWindowIcon(QIcon(r'Python的Socket网络编程\AzChat聊天工具\chat.png'))
+        # 群聊
+        self.MtoM_btn = QPushButton("加入群聊")
+        self.MtoM_btn.setFont(QFont('Arial', 15))
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.MtoM_btn)
+
+        self.setLayout(layout)
+
+        # 设置样式颜色
+        qssStyle = '''
+           QWidget{background-color: #2F4F4F}
+           
+           '''
+        #加载设置好的样式
+        self.setStyleSheet(qssStyle)
+
+        self.show()
+
 
     def chat(self):
         '''
         聊天
         '''
+        # 创建线程 接收数据
+        Thread(target=self.recv_finfor).start()
+
         # 设置窗口的 位置 和 大小
         self.setGeometry(600, 300, 650, 450)
         # 设置窗口标题

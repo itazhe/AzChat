@@ -7,6 +7,7 @@
 
 import socket
 import threading
+import json
 
 
 def server(sock_conn, client_addr):
@@ -61,6 +62,43 @@ def server(sock_conn, client_addr):
         sock_conn.close()
                     
 
+def check_login(sock_conn, client_addr):
+    '''
+    登录校验
+    '''
+    try:
+        data_len = sock_conn.recv(15).decode().rstrip()
+        if len(data_len) > 0:
+            data_len = int(data_len)
+
+            recv_size = 0
+            recv_data = b''
+            while recv_size < data_len:
+                temp = sock_conn.recv(data_len - recv_size)
+
+                if not temp:
+                    break
+
+                recv_data += temp
+                recv_size += len(temp)
+            
+            json_data = json.loads(recv_data.decode())
+
+            print(json_data)
+            
+            '''
+            数据库名 azchat
+            用户 azchat_u
+            密码 1234567890
+            '''
+            
+
+
+    finally:
+        pass
+            
+
+
 def main():
     '''
     主函数
@@ -85,7 +123,7 @@ def main():
         # 添加连接的人进去
         client_socks.append((sock_conn, client_addr))
         # 创建线程处理聊天
-        threading.Thread(target=server, args=(sock_conn, client_addr)).start()
+        threading.Thread(target=check_login, args=(sock_conn, client_addr)).start()
 
 
 if __name__ == '__main__':
