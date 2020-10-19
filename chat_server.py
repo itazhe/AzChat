@@ -8,6 +8,36 @@
 import socket
 import threading
 import json
+from sqlalchemy import Column, String, create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+
+# 创建基类
+BASE = declarative_base()
+
+class UserInfor(BASE):
+    '''
+    人员信息表
+    '''
+    __tablename__ = 'userinfor'
+
+    user_name = Column(String(20), primary_key = True)
+    password = Column(String(20))
+
+    # 格式化数据
+    def __str__(self):
+        return '%s, %s' % (self.user_name, self.password)
+
+try:
+    # 连接数据库
+    MysqlEngine = create_engine('mysql+pymysql://azchat_u:1234567890@localhost:3306/azchat?charset=utf8', encoding = 'utf-8')
+    # 创建mysql类型
+    MysqlSession = sessionmaker(MysqlEngine)
+    # 创建session对象
+    session = MysqlSession()
+
+except Exception as e:
+    print("失败", e)
 
 
 def server(sock_conn, client_addr):
@@ -86,16 +116,40 @@ def check_login(sock_conn, client_addr):
 
             print(json_data)
             
-            '''
-            数据库名 azchat
-            用户 azchat_u
-            密码 1234567890
-            '''
+            # 使用ORM框架 SQLALchemy 查询数据库
+            Uinfor = session.query(UserInfor).filter(UserInfor.user_name == json_data["args"]["user_name"]).one()
             
+            # 登录成功返回json
+            rsp = {"status": 0}
 
+            # 验证通过
+            if Uinfor:
+                if Uinfor.password == json_data["args"]["password"]:
+                    # 转为json
+                    rsp = json.dumps(rsp).encode()
+                    send_data = "{:<15}".format(len(rsp)).encode()
+                    
+                    sock_conn.send(send_data)
+                    sock_conn.send(rsp)
+                else:
+                    # 密码错误
+                    rsp["status"] = 1
+                    rsp = json.dumps(rsp).encode()
+                    send_data = "{:<15}".format(len(rsp)).encode()
+                    
+                    sock_conn.send(send_data)
+                    sock_conn.send(rsp)
+            else:
+                # 用户不存在
+                rsp["status"] = 1
+                rsp = json.dumps(rsp).encode()
+                send_data = "{:<15}".format(len(rsp)).encode()
+                
+                sock_conn.send(send_data)
+                sock_conn.send(rsp)
 
     finally:
-        pass
+        sock_conn.close()
             
 
 
@@ -127,4 +181,7 @@ def main():
 
 
 if __name__ == '__main__':
+    # 调用人员信息类
+    UserInfor()
+    
     main()

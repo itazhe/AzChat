@@ -11,14 +11,16 @@ import socket
 import sys
 from threading import Thread
 from PyQt5.QtWidgets import QApplication, QWidget, QTextEdit, QPushButton, QVBoxLayout, QHBoxLayout, QLineEdit, QFormLayout, QLabel
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QIcon, QTextCursor, QPalette, QBrush, QPixmap, QFont
 import json
 
 
-class Interface(QWidget):
+
+
+class LoginInterface(QWidget):
     '''
-    界面
+    登录
     '''
     def __init__(self):
         super().__init__()
@@ -26,6 +28,7 @@ class Interface(QWidget):
         # self.chat()
         self.login()
         # self.select_chat()
+    
     
     def login(self):
         '''
@@ -41,13 +44,20 @@ class Interface(QWidget):
         self.setWindowIcon(QIcon(r'Python的Socket网络编程\AzChat聊天工具\chat.png'))
 
         # 设置背景图片
-        palette = QPalette()
-        palette.setBrush(QPalette.Background, QBrush(QPixmap(r"Python的Socket网络编程\AzChat聊天工具\bj.png")))
-        self.setPalette(palette)
+        # palette = QPalette()
+        # palette.setBrush(QPalette.Background, QBrush(QPixmap(r"Python的Socket网络编程\AzChat聊天工具\bj.png")))
+        # self.setPalette(palette)
+        # 设置样式颜色
+        qssStyle = '''
+           QWidget{background-color: #2F4F4F}
+           QPushButton{color: #B0E2FF}
+           '''
+        #加载设置好的样式
+        self.setStyleSheet(qssStyle)
 
         # 用户名
         self.label_u = QLabel()
-        self.label_u.setText('<font color=\"#0000FF\">'+ "用户名" + '</font>')
+        self.label_u.setText('<font color=\"#B0E2FF\">'+ "用户名" + '</font>')
         self.label_u.setFont(QFont('Arial', 15))
         self.lineedit_u = QLineEdit()
         # self.lineedit_u.setPlaceholderText("用户名")
@@ -64,6 +74,12 @@ class Interface(QWidget):
         self.lineedit_u.setFont(QFont('Arial',15))
         self.lineedit_p.setFont(QFont('Arial',15))
 
+        
+        self.label_fg = QLabel()
+        self.label_fg.setText('<font color=\"#B0E2FF\">' + "忘记密码?" + '</font>')
+        # self.label_fg.linkActivated.connect(self.forget_password)
+        
+
         # 登录按钮
         self.login_btn = QPushButton("登录")
         self.login_btn.clicked[bool].connect(self.login_req)
@@ -76,6 +92,7 @@ class Interface(QWidget):
         layout.addWidget(self.lineedit_u)
         layout.addWidget(self.label_p)
         layout.addWidget(self.lineedit_p)
+        layout.addWidget(self.label_fg)
         layout.addStretch(1)
         layout.addWidget(self.login_btn)
         layout.addStretch(1)
@@ -107,8 +124,54 @@ class Interface(QWidget):
         login_data_len = "{:<15}".format(len(login_data)).encode()
         # 发送数据
         sock.send(login_data_len + login_data)
+        # 接收数据
+        self.login_resp()
+
+    def login_resp(self):
+        '''
+        登录响应
+        '''
+        header_data = sock.recv(15).decode().rstrip()
+        if len(header_data) > 0:
+            header_data = int(header_data)
+
+            recv_data = 0
+            json_data = b''
+            while recv_data < header_data:
+                temp = sock.recv(header_data - recv_data)
+                if not temp:
+                    break
+
+                json_data += temp
+                recv_data += len(temp)
+
+            json_data = json_data.decode()
+            req = json.loads(json_data)
+            
+            if req["status"] == 0:
+                # 验证通过
+                # 关闭本页面
+                self.close()
+                # 跳转到另一页面，这里前面要加 self 不然页面会闪退！！
+                self.skip = SelectInterface()
+                
+
+    def forget_password(self):
+        '''
+        忘记密码
+        '''
+        print(1)
 
 
+class SelectInterface(QWidget):
+    '''
+    选择聊天
+    '''
+    def __init__(self):
+        super().__init__()
+
+        self.select_chat()
+    
     def select_chat(self):
         '''
         登录后选择聊天界面
@@ -119,6 +182,8 @@ class Interface(QWidget):
         # 群聊
         self.MtoM_btn = QPushButton("加入群聊")
         self.MtoM_btn.setFont(QFont('Arial', 15))
+
+        self.MtoM_btn.clicked[bool].connect(self.MtoM_redirect)
 
         layout = QVBoxLayout()
         layout.addWidget(self.MtoM_btn)
@@ -135,6 +200,21 @@ class Interface(QWidget):
 
         self.show()
 
+    
+    def MtoM_redirect(self):
+        '''
+        群聊跳转
+        '''
+        self.close()
+        self.chat = ChatInterface()
+
+
+
+class ChatInterface(QWidget):
+    def __init__(self):
+        super().__init__()
+
+        self.chat()
 
     def chat(self):
         '''
@@ -261,6 +341,6 @@ if __name__ == '__main__':
     # 每一pyqt5应用程序必须创建一个应用程序对象。sys.argv参数是一个列表，从命令行输入参数
     app = QApplication(sys.argv)
     # 调用类
-    Inter = Interface()
+    Inter = LoginInterface()
     # 保证程序干净的退出
     sys.exit(app.exec_())
